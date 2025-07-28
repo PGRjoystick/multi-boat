@@ -16,30 +16,58 @@ export class MultiBotManager {
   async initialize(): Promise<void> {
     // Initialize Discord if configured
     if (this.config.discord?.token) {
-      const discordAdapter = new DiscordAdapter(this.config.discord.token);
-      this.setupAdapter(discordAdapter);
-      this.adapters.set('discord', discordAdapter);
+      try {
+        const discordAdapter = new DiscordAdapter(this.config.discord.token);
+        this.setupAdapter(discordAdapter);
+        this.adapters.set('discord', discordAdapter);
+        console.log('Discord adapter configured');
+      } catch (error) {
+        console.error('Failed to configure Discord adapter:', error);
+      }
     }
 
     // Initialize Telegram if configured
     if (this.config.telegram?.token) {
-      const telegramAdapter = new TelegramAdapter(this.config.telegram.token);
-      this.setupAdapter(telegramAdapter);
-      this.adapters.set('telegram', telegramAdapter);
+      try {
+        const telegramAdapter = new TelegramAdapter(this.config.telegram.token);
+        this.setupAdapter(telegramAdapter);
+        this.adapters.set('telegram', telegramAdapter);
+        console.log('Telegram adapter configured');
+      } catch (error) {
+        console.error('Failed to configure Telegram adapter:', error);
+      }
     }
 
     // Initialize WhatsApp if configured
     if (this.config.whatsapp !== undefined) {
-      const whatsappAdapter = new WhatsAppAdapter(this.config.whatsapp.sessionPath);
-      this.setupAdapter(whatsappAdapter);
-      this.adapters.set('whatsapp', whatsappAdapter);
+      try {
+        const whatsappAdapter = new WhatsAppAdapter(this.config.whatsapp.sessionPath);
+        this.setupAdapter(whatsappAdapter);
+        this.adapters.set('whatsapp', whatsappAdapter);
+        console.log('WhatsApp adapter configured');
+      } catch (error) {
+        console.error('Failed to configure WhatsApp adapter:', error);
+      }
     }
 
-    // Initialize all adapters
-    const initPromises = Array.from(this.adapters.values()).map(adapter => adapter.initialize());
+    // Initialize all adapters with individual error handling
+    const initPromises = Array.from(this.adapters.entries()).map(async ([platform, adapter]) => {
+      try {
+        await adapter.initialize();
+        console.log(`✅ ${platform} adapter initialized successfully`);
+      } catch (error) {
+        console.error(`❌ Failed to initialize ${platform} adapter:`, error);
+        this.adapters.delete(platform); // Remove failed adapter
+      }
+    });
+    
     await Promise.all(initPromises);
 
-    console.log(`Multi-bot initialized with ${this.adapters.size} platform(s)`);
+    if (this.adapters.size === 0) {
+      throw new Error('No platform adapters were successfully initialized');
+    }
+
+    console.log(`🚀 Multi-bot initialized with ${this.adapters.size} platform(s): ${Array.from(this.adapters.keys()).join(', ')}`);
   }
 
   private setupAdapter(adapter: IPlatformAdapter): void {

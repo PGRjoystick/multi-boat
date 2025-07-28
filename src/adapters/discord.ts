@@ -12,7 +12,6 @@ export class DiscordAdapter implements IPlatformAdapter {
       intents: [
         GatewayIntentBits.Guilds,
         GatewayIntentBits.GuildMessages,
-        GatewayIntentBits.MessageContent,
         GatewayIntentBits.DirectMessages
       ]
     });
@@ -28,8 +27,21 @@ export class DiscordAdapter implements IPlatformAdapter {
       }
     });
 
-    await this.client.login(this.token);
-    console.log(`Discord bot logged in as ${this.client.user?.tag}`);
+    this.client.on('error', (error) => {
+      console.error('Discord client error:', error);
+    });
+
+    this.client.on('shardError', (error) => {
+      console.error('Discord shard error:', error);
+    });
+
+    try {
+      await this.client.login(this.token);
+      console.log(`Discord bot logged in as ${this.client.user?.tag}`);
+    } catch (error) {
+      console.error('Discord login failed:', error);
+      throw new Error(`Discord authentication failed. Please check your token and bot permissions.`);
+    }
   }
 
   async sendMessage(content: string, options: UnifiedSendOptions): Promise<void> {
